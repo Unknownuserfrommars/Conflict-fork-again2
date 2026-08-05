@@ -257,17 +257,22 @@ func _refresh() -> void:
 		_mag_label.text = "--"
 		_reserve_label.text = "无弹匣"
 	else:
-		_mag_label.text = str(in_mag)
+		# 显示"随时可打的发数" = 弹匣内 + 膛内那一发。
+		# 只显示弹匣数会出现换弹后 30 跳 29 的怪现象：满弹匣插上后
+		# 会有一发被推进膛，弹匣里确实只剩 29——但玩家手上仍是 30 发可打。
+		# 膛内那一发另由指示点单独标示。
+		_mag_label.text = str(in_mag + (1 if ammo.has_chambered_round() else 0))
 		_reserve_label.text = "/ %d" % reserve
 
 	# 余弹配色：空 → 红，低 → 橙，正常 → 白
 	var capacity: float = float(_magazine_capacity())
+	var ready_rounds: int = in_mag + (1 if ammo.has_chambered_round() else 0)
 	var col := COL_TEXT
 	if not has_magazine:
 		col = COL_LOW if ammo.has_chambered_round() else COL_EMPTY
-	elif in_mag <= 0:
+	elif ready_rounds <= 0:
 		col = COL_EMPTY
-	elif capacity > 0.0 and float(in_mag) / capacity <= LOW_AMMO_RATIO:
+	elif capacity > 0.0 and float(ready_rounds) / capacity <= LOW_AMMO_RATIO:
 		col = COL_LOW
 	_mag_label.add_theme_color_override("font_color", col)
 
@@ -296,8 +301,8 @@ func _set_dot(lit: bool) -> void:
 
 func _mode_display(mode: String) -> String:
 	match mode:
-		"safe": return "保险"
-		"semi": return "单发"
-		"auto": return "连发"
-		"burst": return "点射"
+		"safe":  return "保险"
+		"semi":  return "单点"
+		"burst": return "连发"
+		"auto":  return "自动"
 		_: return mode
