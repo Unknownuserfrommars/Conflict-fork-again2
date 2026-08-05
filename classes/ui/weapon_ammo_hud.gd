@@ -25,6 +25,7 @@ var _weapon: BaseWeapon
 var _mag_label: Label
 var _reserve_label: Label
 var _mode_label: Label
+var _debug_label: Label
 var _chamber_dot: Panel
 var _reload_countdown: ReloadCountdown
 
@@ -124,8 +125,9 @@ func _build_ui() -> void:
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.offset_left = -230.0
-	panel.offset_top = -92.0
+	# debug 构建多一行弹匣明细，需要更宽更高的面板
+	panel.offset_left = -320.0 if OS.is_debug_build() else -230.0
+	panel.offset_top = -112.0 if OS.is_debug_build() else -92.0
 	panel.offset_right = -28.0
 	panel.offset_bottom = -28.0
 	add_child(panel)
@@ -148,6 +150,9 @@ func _build_ui() -> void:
 	# 上排：膛内指示点 + 弹匣余弹 / 备弹
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	# 主数字靠右贴边：右下角 HUD 的数字位数会变（30 → 9），
+	# 靠右对齐才不会让整块 UI 左右跳动
+	row.alignment = BoxContainer.ALIGNMENT_END
 	vbox.add_child(row)
 
 	_chamber_dot = Panel.new()
@@ -170,7 +175,16 @@ func _build_ui() -> void:
 	_mode_label = Label.new()
 	_mode_label.add_theme_font_size_override("font_size", 12)
 	_mode_label.add_theme_color_override("font_color", COL_MUTED)
+	_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	vbox.add_child(_mode_label)
+
+	# 调试行：全枪总弹数 + 各弹匣明细（仅 debug 构建显示）
+	if OS.is_debug_build():
+		_debug_label = Label.new()
+		_debug_label.add_theme_font_size_override("font_size", 11)
+		_debug_label.add_theme_color_override("font_color", COL_MUTED.darkened(0.1))
+		_debug_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		vbox.add_child(_debug_label)
 
 	_refresh()
 
@@ -278,6 +292,22 @@ func _refresh() -> void:
 
 	_set_dot(ammo.has_chambered_round())
 	_mode_label.text = _mode_display(_weapon.current_fire_mode)
+	_refresh_debug_line(ammo)
+
+
+## 调试行：全枪总弹数、弹匣数量、各弹匣明细
+## 例：总 174 发 · 6 匣 [29|30|30|30|30|25]
+func _refresh_debug_line(ammo: AmmoComponent) -> void:
+	if not _debug_label:
+		return
+	var breakdown: Array[int] = ammo.get_magazine_breakdown()
+	var parts: PackedStringArray = []
+	for i in breakdown.size():
+		# 标记当前在用的弹匣
+		parts.append(("*%d" % breakdown[i]) if i == ammo.current_magazine else str(breakdown[i]))
+	_debug_label.text = "总 %d 发 · %d 匣 [%s]" % [
+		ammo.get_total_rounds(), ammo.get_magazine_pool_size(), "|".join(parts)
+	]
 
 
 func _magazine_capacity() -> int:

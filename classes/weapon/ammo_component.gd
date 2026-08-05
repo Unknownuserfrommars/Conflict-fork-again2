@@ -242,6 +242,27 @@ func recalculate_capacity(base_cap: int, bonus: int) -> void:
 			mag.resize(target)
 	ammo_count_changed.emit(get_current_magazine_count(), get_reserve_count())
 
+## 全枪总弹数：所有弹匣（含在用的）+ 膛内那一发
+func get_total_rounds() -> int:
+	var total := 1 if chambered_round else 0
+	for mag in magazines:
+		total += mag.size()
+	return total
+
+
+## 弹匣数量（含枪上在用的那个）
+func get_magazine_pool_size() -> int:
+	return magazines.size()
+
+
+## 各弹匣余弹明细，按索引顺序返回（调试显示用）
+func get_magazine_breakdown() -> Array[int]:
+	var out: Array[int] = []
+	for mag in magazines:
+		out.append(mag.size())
+	return out
+
+
 ## 获取指定索引的弹匣余弹
 func get_magazine_count(idx: int) -> int:
 	if idx >= 0 and idx < magazines.size():
