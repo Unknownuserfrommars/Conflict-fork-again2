@@ -90,6 +90,9 @@ extends Resource
 ## 留空则使用 WeaponFXConfig 默认值：抛壳照常工作（占位模型），
 ## 枪口焰因无素材而静默跳过，待美术补上贴图后填入 .tres 即可。
 @export var fx_config: WeaponFXConfig
+## 枪身后坐程序动画参数（开火时枪往后推 + 枪口上跳 + 弹簧回正）。
+## 留空使用 WeaponKickConfig 默认值；幅度由后坐物理量实时驱动。
+@export var kick_config: WeaponKickConfig
 @export var weapon_length: float = 0.75
 @export var ads_time: float = 0.25
 @export var ads_center_offset: Vector3 = Vector3(0.0, -0.1, -0.05)

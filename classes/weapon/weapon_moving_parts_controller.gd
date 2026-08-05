@@ -46,13 +46,14 @@ var _use_anim: bool = false
 func initialize(weapon: BaseWeapon) -> void:
 	_weapon = weapon
 	_anim_player = weapon.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	_bolt_carrier    = weapon.find_child(BOLT_CARRIER_NAME,    true, false) as Node3D
-	_charging_handle = weapon.find_child(CHARGING_HANDLE_NAME, true, false) as Node3D
+	_resolve_parts()
 
-	# 用 call_deferred 推迟记录静息位置：
-	# 武器 GLB 子节点可能在自身 _ready() 里调整位置，
-	# 延迟一帧能保证拿到正确的静息值
-	call_deferred("_record_rest_positions")
+	# 枪机框是【配件】（BoltCarrier 槽），而 equip_weapon() 先建控制器、
+	# 后装默认配件——初始化这一刻枪机框还不在场景里，find_child 必然落空，
+	# 枪机因此完全不动（JiYu：程序动画是不是没实装）。
+	# 所以必须在配件变动后重新查找。
+	if weapon.attachment_manager:
+		weapon.attachment_manager.attachments_changed.connect(_on_attachments_changed)
 
 	# 刚体运动一律走程序动画（JiYu 指示：刚体运动的动画用程序动画，不用 AnimationPlayer）。
 	# 枪机行程由 bolt_mass / 复进簧刚度 / 导气延时实时驱动，动画曲线做不到这点：
@@ -66,6 +67,20 @@ func initialize(weapon: BaseWeapon) -> void:
 		)
 
 	weapon.bolt_moving.connect(_on_bolt_moving)
+
+
+## 查找可动部件并记录静息位置。
+## 延迟一帧记录：武器/配件 GLB 子节点可能在自身 _ready() 里调整位置。
+func _resolve_parts() -> void:
+	if not is_instance_valid(_weapon):
+		return
+	_bolt_carrier    = _weapon.find_child(BOLT_CARRIER_NAME,    true, false) as Node3D
+	_charging_handle = _weapon.find_child(CHARGING_HANDLE_NAME, true, false) as Node3D
+	call_deferred("_record_rest_positions")
+
+
+func _on_attachments_changed() -> void:
+	_resolve_parts()
 
 
 func _record_rest_positions() -> void:

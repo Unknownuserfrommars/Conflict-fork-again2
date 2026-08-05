@@ -17,6 +17,7 @@ var is_aiming: bool = false
 
 var _weapon_anim_controller: WeaponAnimationController
 var _moving_parts_controller: WeaponMovingPartsController
+var _kick_controller: WeaponKickController
 var _stats_changed_callable: Callable  # 存储 lambda 以便 disconnect
 
 
@@ -55,9 +56,19 @@ func equip_weapon(weapon: BaseWeapon, emit_changed: bool = true) -> void:
 	weapon.add_child(_moving_parts_controller)
 	_moving_parts_controller.initialize(weapon)
 
+	# 枪身后坐程序动画（开火时枪往后推 + 枪口上跳，弹簧回正）
+	_kick_controller = WeaponKickController.new()
+	_kick_controller.name = "WeaponKickController"
+	weapon.add_child(_kick_controller)
+	_kick_controller.initialize(weapon, weapon.config.kick_config if weapon.config else null)
+
 	# 订阅配件变更信号，透传给外部系统
 	_stats_changed_callable = func():
 		_align_to_grip(current_weapon)
+		# _align_to_grip 会重写枪身 transform，后坐动画必须重新取静息位姿，
+		# 否则两者互相覆盖，枪会卡在偏移位置
+		if is_instance_valid(_kick_controller):
+			_kick_controller.refresh_rest()
 		weapon_stats_changed.emit()
 	weapon.attachment_manager.attachment_equipped.connect(_on_weapon_attachment_equipped)
 	weapon.attachment_manager.attachment_detached.connect(_on_weapon_attachment_detached)
