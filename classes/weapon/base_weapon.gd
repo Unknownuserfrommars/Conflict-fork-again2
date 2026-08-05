@@ -780,6 +780,10 @@ func _reconfigure_from_attachments() -> void:
 		malfunction_component.reconfigure_bolt(bolt)
 	if mag:
 		ammo_component.reconfigure(mag)
+	else:
+		# 弹匣被拆下：弹匣内的弹随弹匣一起离开枪，计数归零；
+		# 但膛内已经上好的那一发留在枪里，仍可击发（真枪行为）。
+		ammo_component.detach_magazine()
 
 	if recoil_component:
 		recoil_component.rebuild_physics()
@@ -799,8 +803,10 @@ func _check_required_attachments() -> bool:
 	if _get_attachment_config_of_type(BarrelConfig) == null:
 		GlobalLogger.warn("BaseWeapon", "[%s] 缺少枪管配件，无法击发" % config.weapon_name)
 		return false
-	if _get_attachment_config_of_type(MagazineConfig) == null:
-		GlobalLogger.warn("BaseWeapon", "[%s] 缺少弹匣配件，无法击发" % config.weapon_name)
+	# 拆掉弹匣不等于不能开火：膛内那一发仍然可以打出去，打完才真正停火。
+	if _get_attachment_config_of_type(MagazineConfig) == null \
+			and not ammo_component.has_chambered_round():
+		GlobalLogger.warn("BaseWeapon", "[%s] 无弹匣且膛内无弹，无法击发" % config.weapon_name)
 		return false
 	return true
 

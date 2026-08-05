@@ -113,6 +113,9 @@ func _on_weapon_changed(weapon) -> void:
 		if _weapon.ammo_component:
 			_weapon.ammo_component.ammo_count_changed.connect(_on_ammo_changed)
 		_weapon.fire_mode_changed.connect(_on_fire_mode_changed)
+		# 装卸弹匣会改变"有没有弹匣"与容量，必须跟着刷新
+		if _weapon.attachment_manager:
+			_weapon.attachment_manager.attachments_changed.connect(_refresh)
 	_refresh()
 
 
@@ -142,13 +145,23 @@ func _refresh() -> void:
 	var ammo := _weapon.ammo_component
 	var in_mag: int = ammo.get_current_magazine_count()
 	var reserve: int = ammo.get_reserve_count()
-	_mag_label.text = str(in_mag)
-	_reserve_label.text = "/ %d" % reserve
+	var has_magazine: bool = _weapon._get_attachment_config_of_type(MagazineConfig) != null
+
+	if not has_magazine:
+		# 拆了弹匣：不显示弹匣计数（枪上没有弹匣可读），
+		# 只用膛内指示点提示"还有一发"。
+		_mag_label.text = "--"
+		_reserve_label.text = "无弹匣"
+	else:
+		_mag_label.text = str(in_mag)
+		_reserve_label.text = "/ %d" % reserve
 
 	# 余弹配色：空 → 红，低 → 橙，正常 → 白
 	var capacity: float = float(_magazine_capacity())
 	var col := COL_TEXT
-	if in_mag <= 0:
+	if not has_magazine:
+		col = COL_LOW if ammo.has_chambered_round() else COL_EMPTY
+	elif in_mag <= 0:
 		col = COL_EMPTY
 	elif capacity > 0.0 and float(in_mag) / capacity <= LOW_AMMO_RATIO:
 		col = COL_LOW

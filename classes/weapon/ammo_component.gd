@@ -193,6 +193,19 @@ func refill_all() -> void:
 	GlobalLogger.debug("AmmoComponent", "弹药已重置：%d 个弹匣各 %d 发并已上膛" % [magazines.size(), cap])
 
 
+## 弹匣被拆下：弹匣里的弹随弹匣离开枪，计数归零。
+## 膛内那一发【不】清除——真枪拆弹匣后枪膛里的子弹仍然能打出去。
+func detach_magazine() -> void:
+	magazines = [[]]
+	current_magazine = 0
+	_next_round_ready = false
+	ammo_count_changed.emit(0, 0)
+	GlobalLogger.debug(
+		"AmmoComponent",
+		"弹匣已拆下，弹匣计数归零；膛内%s" % ("仍有一发" if chambered_round else "无弹")
+	)
+
+
 func reconfigure(mag_cfg: MagazineConfig) -> void:
 	_has_last_round_hold_open = mag_cfg.has_last_round_hold_open
 	var new_cap    := mag_cfg.magazine_capacity
