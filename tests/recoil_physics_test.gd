@@ -19,7 +19,7 @@ static func run_all() -> Dictionary:
 		assert(results[key], key)
 	return results
 
-static func _model(cfg: WeaponConfig):
+static func _model(cfg: WeaponConfig) -> RecoilPhysicsModel:
 	var model = RECOIL_MODEL_SCRIPT.new()
 	model.rebuild(cfg, null)
 	return model
@@ -61,4 +61,5 @@ static func _pose_snapshot_has_six_dof_state() -> bool:
 	component.initialize(_base_config())
 	component.apply_recoil()
 	var pose := component.get_pose_snapshot()
+	component.free()
 	return pose.has("pitch_rad") and pose.has("yaw_rad") and pose.has("roll_rad") and pose.has("position_local") and pose.has("velocity_local") and pose.has("angular_velocity")

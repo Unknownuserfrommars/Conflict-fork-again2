@@ -318,6 +318,7 @@ func _create_subsystem(subsystem: Node, node_name: String) -> Node: # 创建子�
 func _connect_signals() -> void:
 	model_manager.model_loaded.connect(_on_model_loaded)
 	weapon_manager.weapon_changed.connect(_on_weapon_changed)
+	weapon_manager.aiming_changed.connect(hand_ik_controller.set_ads_state)
 	weapon_manager.weapon_stats_changed.connect(_sync_weapon_weight_to_stamina)
 	# 连接姿态变化信号
 	stance_controller.stance_changed.connect(_on_stance_changed)
@@ -512,7 +513,7 @@ func _process(delta: float) -> void:
 	spine_aim_controller.process_aim(delta, procedural_animation_active and not prone)
 	hand_ik_controller.set_prone_state(prone)
 	hand_ik_controller.process_ik(delta, procedural_animation_active)
-	foot_ik_controller.process_ik(delta, procedural_animation_active and not prone)
+	foot_ik_controller.set_active(procedural_animation_active and not prone, delta if procedural_animation_active else 0.0)
 
 
 func _sync_prone_mesh_floor_offset() -> void:
@@ -838,6 +839,9 @@ func _activate_ragdoll(
 		camera_controller.clear_pain_impulse()
 		camera_controller.set_ragdoll_camera_shake(false)
 	is_ragdolled = true
+	spine_aim_controller.process_aim(0.0, false)
+	hand_ik_controller.process_ik(0.0, false)
+	foot_ik_controller.set_active(false)
 	velocity = Vector3.ZERO
 	_set_collision_enabled(false)
 	# 轻微上移玩家原点，给物理骨骼初始位置留出与地面的间隙，
@@ -956,6 +960,21 @@ func set_ai_input(world_direction: Vector3, running: bool = false, sprinting: bo
 func clear_ai_input() -> void:
 	if movement_controller:
 		movement_controller.clear_ai_input()
+
+
+## AI owns body yaw; elevation is consumed by the same spine aim as local view input.
+func set_ai_aim_direction(world_direction: Vector3) -> bool:
+	if not is_ai_player or not is_alive or is_ragdolled or not camera_controller:
+		return false
+	if not world_direction.is_finite() or world_direction.is_zero_approx():
+		return false
+	var direction := world_direction.normalized()
+	var horizontal := Vector3(direction.x, 0.0, direction.z)
+	if horizontal.length_squared() > 0.000001:
+		look_at(global_position + horizontal, Vector3.UP)
+	var pitch := atan2(direction.y, horizontal.length())
+	camera_controller.set_ai_view_angles(rotation.y, pitch)
+	return true
 
 
 func set_ai_fire_input(pressed: bool) -> void:

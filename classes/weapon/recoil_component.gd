@@ -34,8 +34,6 @@ func rebuild_physics() -> void:
 	if not physics_model:
 		physics_model = RecoilPhysicsModel.new()
 	physics_model.rebuild(config, attachment_manager)
-	else:
-		physics_model.rebuild(config, attachment_manager)
 	reset()
 
 
